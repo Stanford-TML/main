@@ -202,21 +202,24 @@
   const SEGMENT_DURATION = 60;     // 1 minute per segment
   const PLAY_DURATION = 10;        // play 10 seconds from each segment
   const FADE_DURATION = 500;       // 0.5 second fade transition in milliseconds
+  const SUBSEG_PER_SEGMENT = 6;    // 6 subsegments per 1-minute segment (0-10s, 10-20s, 20-30s, 30-40s, 40-50s, 50-60s)
   
-  let currentSegment = 0;          // which 1-minute segment we're on
+  let currentSegment = 0;          // which 1-minute segment we're on (0-7 for 8-minute video)
+  let currentSubsegment = 0;       // which 10-second chunk within each minute (0-5)
   let totalSegments = 0;           // will be calculated based on video duration
 
-  function playNextSegment() {
+  function playNextSubsegment() {
     video.muted = true; // required for autoplay on most browsers
     
     // Calculate the absolute start time in the video
-    const absoluteStart = currentSegment * SEGMENT_DURATION;
+    // For segment N, subsegment M: start = N * 60 + M * 10
+    const absoluteStart = currentSegment * SEGMENT_DURATION + currentSubsegment * PLAY_DURATION;
     const absoluteEnd = absoluteStart + PLAY_DURATION;
 
     // Fade in
     video.classList.remove('fading');
     
-    // Seek to start of this segment
+    // Seek to start of this subsegment
     video.currentTime = absoluteStart;
 
     const onTime = () => {
@@ -233,13 +236,19 @@
           // Move to next segment
           currentSegment++;
           
-          // Loop back to beginning if we've gone through all segments
+          // If we've gone through all segments, move to next subsegment
           if (currentSegment >= totalSegments) {
             currentSegment = 0;
+            currentSubsegment++;
+            
+            // If we've gone through all subsegments, loop back to beginning
+            if (currentSubsegment >= SUBSEG_PER_SEGMENT) {
+              currentSubsegment = 0;
+            }
           }
           
-          // Play next segment
-          playNextSegment();
+          // Play next subsegment
+          playNextSubsegment();
         }, FADE_DURATION);
       }
     };
@@ -260,7 +269,7 @@
     totalSegments = Math.floor(video.duration / SEGMENT_DURATION);
     if (totalSegments < 1) totalSegments = 1;
     
-    playNextSegment();
+    playNextSubsegment();
   }
 
   if (isFinite(video.duration) && video.duration > 0) {
