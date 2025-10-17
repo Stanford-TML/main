@@ -161,10 +161,116 @@
   
 
 
-<div style="text-align:center;width:100%;background-color:#2e2d29">
-  <video playsinline="" autoplay="" muted="" loop="" controls style="width:100%;max-width:1620px;height:100%">
-        <source src="TML_trailer_website.mp4" type="video/mp4">
+<style>
+  #tml-hero { 
+    position: relative; 
+    max-width: 1620px; 
+    margin: 0 auto;
+    overflow: hidden;
+    background-color: #2e2d29;
+    /* Fixed aspect ratio based on typical video */
+    aspect-ratio: 16/9;
+  }
+  #tml-hero video { 
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%; 
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+    display: block;
+  }
+</style>
+
+<div id="tml-hero" aria-label="TML hero video">
+  <video id="tml-video" muted playsinline preload="auto" aria-label="TML demo (muted)">
+    <source src="TML_trailer_website.mp4" type="video/mp4">
+    Your browser does not support HTML5 video.
   </video>
+</div>
+
+<script>
+(function () {
+  const video = document.getElementById('tml-video');
+
+  const TOTAL_SEGMENTS = 16;       // 16 segments of 30 seconds
+  const SEGMENT_DURATION = 30;     // seconds per segment
+  const SUBSEG_DURATION = 10;      // play 10 seconds from each segment
+  const SUBSEG_PER_SEGMENT = 3;    // 3 subsegments per segment (0-10s, 10-20s, 20-30s)
+  
+  let currentSegment = 0;          // which of the 17 segments (0-16)
+  let currentSubsegment = 0;       // which 10-second chunk within the segment (0-2)
+
+  function playNextSubsegment() {
+    video.muted = true; // required for autoplay on most browsers
+    
+    // Calculate the absolute start time in the video
+    // For segment N, subsegment M: start = N * 30 + M * 10
+    const absoluteStart = currentSegment * SEGMENT_DURATION + currentSubsegment * SUBSEG_DURATION;
+    const absoluteEnd = absoluteStart + SUBSEG_DURATION;
+
+    // Seek to start of this subsegment
+    video.currentTime = absoluteStart;
+
+    const onTime = () => {
+      if (video.currentTime >= absoluteEnd) {
+        video.removeEventListener('timeupdate', onTime);
+        video.pause();
+        
+        // Move to next segment
+        currentSegment++;
+        
+        // If we've gone through all segments, move to next subsegment
+        if (currentSegment >= TOTAL_SEGMENTS) {
+          currentSegment = 0;
+          currentSubsegment++;
+          
+          // If we've gone through all subsegments, loop back to beginning
+          if (currentSubsegment >= SUBSEG_PER_SEGMENT) {
+            currentSubsegment = 0;
+          }
+        }
+        
+        // Play next subsegment
+        playNextSubsegment();
+      }
+    };
+    
+    video.addEventListener('timeupdate', onTime);
+    
+    video.play().catch((error) => {
+      console.log('Autoplay blocked:', error);
+      // If autoplay is blocked, add controls so user can interact
+      video.setAttribute('controls', '');
+    });
+  }
+
+  // Start playback once metadata is ready
+  if (isFinite(video.duration) && video.duration > 0) {
+    playNextSubsegment();
+  } else {
+    video.addEventListener('loadedmetadata', playNextSubsegment, { once: true });
+    // Load video immediately for better compatibility
+    video.load();
+  }
+})();
+</script>
+
+<div style="text-align: center; margin-top: 1rem;">
+  <a href="TML_trailer_website.mp4" target="_blank" style="
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background-color: rgba(140, 21, 21, 0.9);
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+  " onmouseover="this.style.backgroundColor='rgba(140, 21, 21, 1)'" onmouseout="this.style.backgroundColor='rgba(140, 21, 21, 0.9)'">
+    Watch Full Video
+  </a>
 </div>
 
 
