@@ -167,11 +167,11 @@
     max-width: 1620px; 
     margin: 0 auto;
     overflow: hidden;
-    background-color: #2e2d29;
+    background-color: #ffffff;
     /* Fixed aspect ratio based on typical video */
     aspect-ratio: 16/9;
   }
-  #tml-hero video { 
+  #tml-hero video, #tml-hero img { 
     position: absolute;
     top: 0;
     left: 0;
@@ -180,15 +180,26 @@
     object-fit: contain;
     object-position: center;
     display: block;
-    opacity: 1;
     transition: opacity 0.5s ease-in-out;
   }
-  #tml-hero video.fading {
+  #tml-hero video {
+    opacity: 0;
+    z-index: 2;
+  }
+  #tml-hero video.showing {
+    opacity: 1;
+  }
+  #tml-hero img {
+    opacity: 1;
+    z-index: 1;
+  }
+  #tml-hero img.hidden {
     opacity: 0;
   }
 </style>
 
 <div id="tml-hero" aria-label="TML hero video">
+  <img id="tml-cover" src="tml_cover.webp" alt="TML Cover" />
   <video id="tml-video" muted playsinline preload="auto" aria-label="TML demo (muted)">
     <source src="TML_trailer_website.mp4" type="video/mp4">
     Your browser does not support HTML5 video.
@@ -198,10 +209,12 @@
 <script>
 (function () {
   const video = document.getElementById('tml-video');
+  const cover = document.getElementById('tml-cover');
 
   const SEGMENT_DURATION = 60;     // 1 minute per segment
   const PLAY_DURATION = 10;        // play 10 seconds from each segment
   const FADE_DURATION = 500;       // 0.5 second fade transition in milliseconds
+  const COVER_DURATION = 2000;     // 2 seconds to show cover between segments
   const SUBSEG_PER_SEGMENT = 6;    // 6 subsegments per 1-minute segment (0-10s, 10-20s, 20-30s, 30-40s, 40-50s, 50-60s)
   
   let currentSegment = 0;          // which 1-minute segment we're on (0-7 for 8-minute video)
@@ -216,20 +229,24 @@
     const absoluteStart = currentSegment * SEGMENT_DURATION + currentSubsegment * PLAY_DURATION;
     const absoluteEnd = absoluteStart + PLAY_DURATION;
 
-    // Fade in
-    video.classList.remove('fading');
-    
     // Seek to start of this subsegment
     video.currentTime = absoluteStart;
+
+    // Fade in video, fade out cover
+    setTimeout(() => {
+      video.classList.add('showing');
+      cover.classList.add('hidden');
+    }, 50); // Small delay to ensure seek completes
 
     const onTime = () => {
       if (video.currentTime >= absoluteEnd) {
         video.removeEventListener('timeupdate', onTime);
         
-        // Fade out
-        video.classList.add('fading');
+        // Fade out video, fade in cover
+        video.classList.remove('showing');
+        cover.classList.remove('hidden');
         
-        // Wait for fade out, then move to next segment
+        // Wait for fade out + cover display time before moving to next segment
         setTimeout(() => {
           video.pause();
           
@@ -249,7 +266,7 @@
           
           // Play next subsegment
           playNextSubsegment();
-        }, FADE_DURATION);
+        }, FADE_DURATION + COVER_DURATION);
       }
     };
     
@@ -259,7 +276,8 @@
       console.log('Autoplay blocked:', error);
       // If autoplay is blocked, add controls so user can interact
       video.setAttribute('controls', '');
-      video.classList.remove('fading');
+      video.classList.add('showing');
+      cover.classList.add('hidden');
     });
   }
 
@@ -269,7 +287,10 @@
     totalSegments = Math.floor(video.duration / SEGMENT_DURATION);
     if (totalSegments < 1) totalSegments = 1;
     
-    playNextSubsegment();
+    // Start with cover showing, then begin playback
+    setTimeout(() => {
+      playNextSubsegment();
+    }, COVER_DURATION);
   }
 
   if (isFinite(video.duration) && video.duration > 0) {
@@ -824,3 +845,4 @@
 
       </body>
 </html>
+
