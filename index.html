@@ -180,6 +180,11 @@
     object-fit: contain;
     object-position: center;
     display: block;
+    opacity: 1;
+    transition: opacity 0.5s ease-in-out;
+  }
+  #tml-hero video.fading {
+    opacity: 0;
   }
 </style>
 
@@ -194,46 +199,48 @@
 (function () {
   const video = document.getElementById('tml-video');
 
-  const TOTAL_SEGMENTS = 16;       // 16 segments of 30 seconds
-  const SEGMENT_DURATION = 30;     // seconds per segment
-  const SUBSEG_DURATION = 10;      // play 10 seconds from each segment
-  const SUBSEG_PER_SEGMENT = 3;    // 3 subsegments per segment (0-10s, 10-20s, 20-30s)
+  const SEGMENT_DURATION = 60;     // 1 minute per segment
+  const PLAY_DURATION = 10;        // play 10 seconds from each segment
+  const FADE_DURATION = 500;       // 0.5 second fade transition in milliseconds
   
-  let currentSegment = 0;          // which of the 17 segments (0-16)
-  let currentSubsegment = 0;       // which 10-second chunk within the segment (0-2)
+  let currentSegment = 0;          // which 1-minute segment we're on
+  let totalSegments = 0;           // will be calculated based on video duration
 
-  function playNextSubsegment() {
+  function playNextSegment() {
     video.muted = true; // required for autoplay on most browsers
     
     // Calculate the absolute start time in the video
-    // For segment N, subsegment M: start = N * 30 + M * 10
-    const absoluteStart = currentSegment * SEGMENT_DURATION + currentSubsegment * SUBSEG_DURATION;
-    const absoluteEnd = absoluteStart + SUBSEG_DURATION;
+    const absoluteStart = currentSegment * SEGMENT_DURATION;
+    const absoluteEnd = absoluteStart + PLAY_DURATION;
 
-    // Seek to start of this subsegment
+    // Fade in
+    video.classList.remove('fading');
+    
+    // Seek to start of this segment
     video.currentTime = absoluteStart;
 
     const onTime = () => {
       if (video.currentTime >= absoluteEnd) {
         video.removeEventListener('timeupdate', onTime);
-        video.pause();
         
-        // Move to next segment
-        currentSegment++;
+        // Fade out
+        video.classList.add('fading');
         
-        // If we've gone through all segments, move to next subsegment
-        if (currentSegment >= TOTAL_SEGMENTS) {
-          currentSegment = 0;
-          currentSubsegment++;
+        // Wait for fade out, then move to next segment
+        setTimeout(() => {
+          video.pause();
           
-          // If we've gone through all subsegments, loop back to beginning
-          if (currentSubsegment >= SUBSEG_PER_SEGMENT) {
-            currentSubsegment = 0;
+          // Move to next segment
+          currentSegment++;
+          
+          // Loop back to beginning if we've gone through all segments
+          if (currentSegment >= totalSegments) {
+            currentSegment = 0;
           }
-        }
-        
-        // Play next subsegment
-        playNextSubsegment();
+          
+          // Play next segment
+          playNextSegment();
+        }, FADE_DURATION);
       }
     };
     
@@ -243,35 +250,28 @@
       console.log('Autoplay blocked:', error);
       // If autoplay is blocked, add controls so user can interact
       video.setAttribute('controls', '');
+      video.classList.remove('fading');
     });
   }
 
   // Start playback once metadata is ready
+  function initialize() {
+    // Calculate total segments based on video duration
+    totalSegments = Math.floor(video.duration / SEGMENT_DURATION);
+    if (totalSegments < 1) totalSegments = 1;
+    
+    playNextSegment();
+  }
+
   if (isFinite(video.duration) && video.duration > 0) {
-    playNextSubsegment();
+    initialize();
   } else {
-    video.addEventListener('loadedmetadata', playNextSubsegment, { once: true });
+    video.addEventListener('loadedmetadata', initialize, { once: true });
     // Load video immediately for better compatibility
     video.load();
   }
 })();
 </script>
-
-<div style="text-align: center; margin-top: 1rem;">
-  <a href="TML_trailer_website.mp4" target="_blank" style="
-    display: inline-block;
-    padding: 0.5rem 1rem;
-    background-color: rgba(140, 21, 21, 0.9);
-    color: white;
-    text-decoration: none;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    transition: background-color 0.3s ease;
-  " onmouseover="this.style.backgroundColor='rgba(140, 21, 21, 1)'" onmouseout="this.style.backgroundColor='rgba(140, 21, 21, 0.9)'">
-    Watch Full Video
-  </a>
-</div>
 
 
 
@@ -309,6 +309,21 @@
     </div>
 </div>
 
+<div style="text-align: center; margin: 2rem 0; padding: 0 1rem;">
+  <a href="TML_trailer_website.mp4" target="_blank" style="
+    display: inline-block;
+    padding: 1rem 2rem;
+    background-color: rgba(140, 21, 21, 0.9);
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 1.8rem;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+  " onmouseover="this.style.backgroundColor='rgba(140, 21, 21, 1)'" onmouseout="this.style.backgroundColor='rgba(140, 21, 21, 0.9)'">
+    Watch Full Video
+  </a>
+</div>
 
 <div class="jumpstart-ui--one-column centered-container">
     <div  class="main-region flex-12-of-12">
